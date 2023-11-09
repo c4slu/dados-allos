@@ -110,6 +110,6 @@ async function processPayloads(diasMes) {
     // );
   }
 }
-deleteJSON();
+//deleteJSON();
 // Chamada da função para processar os payloads
 processPayloads(diasMes);

@@ -50,27 +50,32 @@ async function InsertDados(payload, table) {
   await axios
     .request(config)
     .then((response) => {
-      sql.connect(configdb).then(async () => {
-        const jsonData = response.data.data;
+      // sql.connect(configdb).then(async () => {
+      const jsonData = response.data.data;
 
-        const jsonDataArray = Array.isArray(jsonData) ? jsonData : [jsonData];
+      const jsonDataArray = Array.isArray(jsonData) ? jsonData : [jsonData];
+      let counter = 0;
+      for (let i = 0; i < jsonDataArray.length; i++) {
+        if (jsonDataArray[i].data === "0") counter++;
+      }
+      console.log(jsonData);
 
-        for (const caslu of jsonDataArray) {
-          const jsonStr = JSON.stringify(caslu);
+      // for (const caslu of jsonDataArray) {
+      //   const jsonStr = JSON.stringify(caslu);
 
-          const request = new sql.Request();
+      //   const request = new sql.Request();
 
-          request.input("json", sql.VarChar, jsonStr);
+      //   request.input("json", sql.VarChar, jsonStr);
 
-          await request.query(
-            `INSERT INTO ${table} (ID, JSON, DTIMPORT) VALUES (null, @json, null)`
-          );
+      //   await request.query(
+      //     `INSERT INTO ${table} (ID, JSON, DTIMPORT) VALUES (null, @json, null)`
+      //   );
 
-          console.log(
-            `Inserção no banco de dados concluída na tabela ${table}`
-          );
-        }
-      });
+      //   console.log(
+      //     `Inserção no banco de dados concluída na tabela ${table}`
+      //   );
+      // }
+      // });
     })
     .catch((error) => {
       console.log(error);

@@ -36,5 +36,4 @@ function deleteJSON() {
   });
 }
 
-deleteJSON();
 module.exports = deleteJSON;
