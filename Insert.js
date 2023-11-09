@@ -4,6 +4,7 @@ const dotenv = require("dotenv");
 dotenv.config();
 const { DB_SERVER, DB_USER, DB_PASSWORD, DB_DATABASE, INSTANCIA } = process.env;
 const sql = require("mssql");
+const timeout = 120_000_000;
 
 // Configs db
 const configdb = {
@@ -16,62 +17,66 @@ const configdb = {
     trustServerCertificate: true,
     enableArithAbort: true,
     instanceName: INSTANCIA,
-    requestTimeout: 120 * 1000, // 90 segundos,
+  },
+  connectionTimeout: 30 * 60000,
+  requestTimeout: timeout,
+  pool: {
+    max: 1000,
+    min: 1,
+    idleTimeoutMillis: timeout,
+    acquireTimeoutMillis: timeout,
+    createTimeoutMillis: timeout,
+    destroyTimeoutMillis: timeout,
+    reapIntervalMillis: timeout,
+    createRetryIntervalMillis: timeout,
   },
 };
 
 // Configs axios request
 
-function InsertDados(payload, table) {
+async function InsertDados(payload, table) {
   const config = {
     method: "post",
-    maxBodyLength: Infinity,
     url: "https://api.buzzmonitor.com.br/scroll.json",
     headers: {
       "Content-Type": "text/plain",
     },
     data: payload,
+    maxContentLength: 100000000,
+    maxBodyLength: 1000000000,
+    timeout: 0,
   };
 
-  axios
+  await axios
     .request(config)
     .then((response) => {
       sql.connect(configdb).then(async () => {
         const jsonData = response.data.data;
-        const ScrollID = response.data.scroll_id;
 
-        for (const post of jsonData) {
-          // Para cada post_id, insira-o em uma linha separada no SQL Server
-          const ID = post.elasticsearch_id;
-          const jsonStr = JSON.stringify(post);
-          const dt = post.date;
+        const jsonDataArray = Array.isArray(jsonData) ? jsonData : [jsonData];
+
+        for (const caslu of jsonDataArray) {
+          const jsonStr = JSON.stringify(caslu);
 
           const request = new sql.Request();
 
-          request.input("ID", sql.VarChar, ID); // Supondo que post_id seja um inteiro
-          request.input("json", sql.NVarChar, jsonStr);
-          request.input("Dt", sql.Float, dt);
+          request.input("json", sql.VarChar, jsonStr);
 
           await request.query(
-            `INSERT INTO ${table} (ID, JSON, DTIMPORT) VALUES (@ID, @json, @Dt)`
+            `INSERT INTO ${table} (ID, JSON, DTIMPORT) VALUES (null, @json, null)`
           );
-          // console.log(
-          //   `Inserção no banco de dados concluída para ID ${ID} da tabela ${table}`
-          // );
+
+          console.log(
+            `Inserção no banco de dados concluída na tabela ${table}`
+          );
         }
-        console.log(
-          "TABELA \n" +
-            table +
-            "\n\nSCROLL ID:\n" +
-            ScrollID +
-            "\n\n\n ===-----=== \n\n\n"
-        );
       });
     })
     .catch((error) => {
       console.log(error);
     });
 }
+
 module.exports = {
   InsertDados,
 };
